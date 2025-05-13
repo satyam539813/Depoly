@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: './',
+  base: '/',
   plugins: [react()],
   build: {
     outDir: 'dist',
@@ -16,9 +16,13 @@ export default defineConfig({
         },
       },
     },
+    assetsInlineLimit: 0,
+    chunkSizeWarningLimit: 1600,
+    copyPublicDir: true,
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'three'],
   },
-  assetsInclude: ['**/*.glb', '**/*.hdr'],
+  assetsInclude: ['**/*.glb', '**/*.hdr', '**/*.gltf'],
+  publicDir: 'public',
 }) 
