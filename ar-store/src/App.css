@@ -1,0 +1,16 @@
+/* App.css */
+:root {
+  --bg-color: #121212;
+  --text-color: #f5f5f5;
+  --accent-color: #00ffe1; /* Teal accent for premium look */
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --border-radius: 12px;
+  --font-family: 'Inter', sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
