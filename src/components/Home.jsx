@@ -1,7 +1,12 @@
 import React from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, useGLTF } from '@react-three/drei';
 import { motion } from 'framer-motion';
+
+function Model() {
+    const { scene } = useGLTF('/models/1.glb');
+    return <primitive object={scene} position={[0, 0, 0]} scale={[0.8, 0.8, 0.8]} />;
+}
 
 function Home() {
     return (
@@ -47,8 +52,12 @@ function Home() {
                 >
                     <ambientLight intensity={0.5} />
                     <pointLight position={[10, 10, 10]} />
-                    <OrbitControls enableZoom={false} />
-                    {/* Add your 3D model here */}
+                    <OrbitControls 
+                        enableZoom={false}
+                        autoRotate
+                        autoRotateSpeed={2}
+                    />
+                    <Model />
                 </Canvas>
             </div>
 
