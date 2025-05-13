@@ -1,82 +1,282 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect, useRef, Suspense, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
-import { ARButton, XR } from '@react-three/xr';
-import { OrbitControls, useGLTF } from '@react-three/drei';
+import { ARButton, XR, Interactive } from '@react-three/xr';
+import { OrbitControls, useGLTF, Environment, PresentationControls, Html, useProgress } from '@react-three/drei';
+import { motion, AnimatePresence } from 'framer-motion';
 import products from '../../data/products';
 
-function ARScene() {
-    const { id } = useParams();
-    const product = products.find(p => p.id === Number(id));
+function Loader() {
+    const { progress } = useProgress();
+    return (
+        <Html center>
+            <div className="model-loader">
+                <div className="loader-progress">{progress.toFixed(0)}%</div>
+                <div className="loader-bar" style={{ width: `${progress}%` }} />
+            </div>
+        </Html>
+    );
+}
 
-    // Load your GLB model from public directory
-    const { scene } = useGLTF('/scene.glb'); // Direct path from public folder
+function ARModel({ modelPath, scale = 1, isPreview = false }) {
+    const { scene } = useGLTF(modelPath);
+    const modelRef = useRef();
+    const [modelScale, setModelScale] = useState(scale);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    const handleScale = (delta) => {
+        const scaleSpeed = 0.1;
+        const newScale = modelScale + (delta * scaleSpeed);
+        setModelScale(Math.min(Math.max(newScale, 0.5), 2.0));
+    };
+
+    const handleTouch = useMemo(() => {
+        let lastDistance = 0;
+        
+        return (event) => {
+            if (event.touches.length === 2) {
+                const distance = Math.hypot(
+                    event.touches[0].clientX - event.touches[1].clientX,
+                    event.touches[0].clientY - event.touches[1].clientY
+                );
+                
+                if (lastDistance) {
+                    const delta = (distance - lastDistance) * 0.01;
+                    handleScale(delta);
+                }
+                
+                lastDistance = distance;
+                event.preventDefault();
+            }
+        };
+    }, [modelScale]);
+
+    useEffect(() => {
+        if (modelRef.current) {
+            modelRef.current.scale.set(modelScale, modelScale, modelScale);
+        }
+    }, [modelScale]);
+
+    useEffect(() => {
+        if (isMobile) {
+            document.addEventListener('touchmove', handleTouch, { passive: false });
+            return () => document.removeEventListener('touchmove', handleTouch);
+        }
+    }, [handleTouch, isMobile]);
+
+    const memoizedScene = useMemo(() => scene.clone(), [scene]);
+
+    return isPreview ? (
+        <primitive
+            ref={modelRef}
+            object={memoizedScene}
+            scale={[modelScale, modelScale, modelScale]}
+            position={[0, 0, 0]}
+            onWheel={(e) => handleScale(e.deltaY > 0 ? -1 : 1)}
+        />
+    ) : (
+        <Interactive onSelect={() => handleScale(1)}>
+            <primitive 
+                ref={modelRef}
+                object={memoizedScene}
+                scale={[modelScale, modelScale, modelScale]}
+                position={[0, 0, -1]}
+            />
+        </Interactive>
+    );
+}
+
+function PreviewMode({ product }) {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     return (
-        <primitive
-            object={scene}
-            position={[0, 0, -2]}  // Default position
-            scale={[1, 1, 1]}      // Start with original scale
-        />
+        <Canvas
+            camera={{ position: [0, 0, 4], fov: isMobile ? 60 : 45 }}
+            style={{ 
+                background: 'linear-gradient(135deg, #030712, #111827)',
+                width: '100%',
+                height: '100vh'
+            }}
+            gl={{ 
+                preserveDrawingBuffer: true,
+                powerPreference: "high-performance",
+                antialias: true
+            }}
+            dpr={[1, Math.min(window.devicePixelRatio, 2)]} // Optimize for high DPI displays
+        >
+            <Suspense fallback={<Loader />}>
+                <ambientLight intensity={0.5} />
+                <pointLight position={[10, 10, 10]} intensity={1} />
+                <spotLight
+                    position={[0, 5, 5]}
+                    angle={0.4}
+                    penumbra={1}
+                    intensity={1.5}
+                    castShadow
+                />
+                <group position={[0, 0, 0]}>
+                    <PresentationControls
+                        global={false}
+                        cursor={true}
+                        speed={1}
+                        zoom={isMobile ? 1.5 : 2}
+                        rotation={[0, -Math.PI / 4, 0]}
+                        polar={[-Math.PI / 4, Math.PI / 4]}
+                        azimuth={[-Math.PI / 4, Math.PI / 4]}
+                        config={{ mass: 1, tension: 170, friction: 26 }}
+                    >
+                        <ARModel modelPath={product.modelPath} scale={1} isPreview={true} />
+                    </PresentationControls>
+                </group>
+                <Environment
+                    files="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_03_1k.hdr"
+                    background={false}
+                    intensity={1}
+                />
+                {!isMobile && (
+                    <OrbitControls
+                        enableZoom={true}
+                        minDistance={2}
+                        maxDistance={10}
+                        zoomSpeed={1}
+                        enableDamping
+                        dampingFactor={0.05}
+                    />
+                )}
+            </Suspense>
+        </Canvas>
+    );
+}
+
+function Notification({ message, isVisible }) {
+    return (
+        <AnimatePresence>
+            {isVisible && (
+                <motion.div
+                    className="notification"
+                    initial={{ opacity: 0, x: -100 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ 
+                        type: "spring",
+                        stiffness: 100,
+                        damping: 15,
+                        duration: 0.3 
+                    }}
+                >
+                    <div className="notification-dot" />
+                    <div>
+                        <div>{message}</div>
+                        <div className="scaling-instructions">
+                            Use mouse wheel or pinch to scale the model
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 }
 
 export default function ARView() {
+    const { id } = useParams();
+    const navigate = useNavigate();
     const [isARSupported, setIsARSupported] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [showNotification, setShowNotification] = useState(true);
+    
+    const product = products.find(p => p.id === parseInt(id));
 
     useEffect(() => {
         const checkARSupport = async () => {
-            if (navigator.xr) {
-                try {
-                    const supported = await navigator.xr.isSessionSupported('immersive-ar');
-                    setIsARSupported(supported);
-                } catch (error) {
-                    console.error('AR support check failed:', error);
+            try {
+                if ('xr' in navigator) {
+                    const isSupported = await navigator.xr.isSessionSupported('immersive-ar');
+                    setIsARSupported(isSupported);
+                } else {
+                    setError('WebXR is not available in your browser');
                 }
+            } catch (err) {
+                setError('Failed to check AR support');
+                console.error(err);
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
 
         checkARSupport();
+
+        // Hide notification after 3 seconds instead of 5
+        const timer = setTimeout(() => {
+            setShowNotification(false);
+        }, 3000);
+
+        return () => clearTimeout(timer);
     }, []);
 
-    return (
-        <div className="ar-container" style={{ width: '100vw', height: '100vh' }}>
-            {isLoading && <div className="loading">Checking AR capabilities...</div>}
+    if (!product) {
+        return (
+            <div className="ar-error-container">
+                <h2>Product not found</h2>
+                <button onClick={() => navigate('/products')} className="back-button">
+                    Back to Products
+                </button>
+            </div>
+        );
+    }
 
-            {!isLoading && (
+    if (isLoading) {
+        return (
+            <div className="ar-loading-container">
+                <div className="loading-spinner"></div>
+                <p>Checking AR capabilities...</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="ar-view-container">
+            {!isARSupported && (
                 <>
-                    {isARSupported ? (
-                        <>
+                    <motion.div 
+                        className="ar-header minimal"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <button onClick={() => navigate('/products')} className="back-button">
+                            Back to Products
+                        </button>
+                    </motion.div>
+                    <Notification 
+                        message="AR not supported - Showing 3D preview"
+                        isVisible={showNotification}
+                    />
+                    <PreviewMode product={product} />
+                </>
+            )}
+            
+            {isARSupported && (
+                <>
+                    <div className="ar-header minimal">
+                        <button onClick={() => navigate('/products')} className="back-button">
+                            Back to Products
+                        </button>
+                    </div>
+                    <Canvas>
+                        <XR>
+                            <ambientLight intensity={0.8} />
+                            <pointLight position={[10, 10, 10]} intensity={1} />
+                            <ARModel modelPath={product.modelPath} scale={0.8} />
+                        </XR>
+                    </Canvas>
                             <ARButton
+                        className="ar-button"
                                 sessionInit={{
                                     requiredFeatures: ['hit-test'],
-                                    optionalFeatures: ['dom-overlay']
-                                }}
-                            />
-                            <Canvas camera={{ position: [0, 0, 3] }}>
-                                <XR>
-                                    <ambientLight intensity={0.5} />
-                                    <pointLight position={[10, 10, 10]} />
-                                    <OrbitControls />
-                                    <ARScene />
-                                </XR>
-                            </Canvas>
-                        </>
-                    ) : (
-                        <>
-                            <Canvas camera={{ position: [0, 0, 3] }}>
-                                <ambientLight intensity={0.5} />
-                                <pointLight position={[10, 10, 10]} />
-                                <OrbitControls />
-                                <ARScene />
-                            </Canvas>
-                            <div className="ar-warning">
-                                AR not supported - Showing 3D preview
-                            </div>
-                        </>
-                    )}
+                            optionalFeatures: ['dom-overlay'],
+                        }}
+                    />
                 </>
             )}
         </div>

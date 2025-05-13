@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Share+Tech&display=swap');
+
+.title-text {
+    position: relative;
+    overflow: visible !important;
+}
+
+.title-text::before {
+    content: attr(data-text);
+    position: absolute;
+    left: 2px;
+    text-shadow: -1px 0 #00ffff;
+    top: 0;
+    color: white;
+    overflow: hidden;
+    clip: rect(0, 900px, 0, 0);
+    animation: noise-anim-2 3s infinite linear alternate-reverse;
+}
+
+.title-text::after {
+    content: attr(data-text);
+    position: absolute;
+    left: -2px;
+    text-shadow: 1px 0 #ff00ff;
+    top: 0;
+    color: white;
+    overflow: hidden;
+    clip: rect(0, 900px, 0, 0);
+    animation: noise-anim 2s infinite linear alternate-reverse;
+}
+
+@keyframes noise-anim {
+    0% {
+        clip: rect(51px, 9999px, 28px, 0);
+    }
+    5% {
+        clip: rect(70px, 9999px, 19px, 0);
+    }
+    10% {
+        clip: rect(92px, 9999px, 13px, 0);
+    }
+    /* ... more keyframes ... */
+    100% {
+        clip: rect(48px, 9999px, 29px, 0);
+    }
+}
+
+@keyframes noise-anim-2 {
+    0% {
+        clip: rect(33px, 9999px, 42px, 0);
+    }
+    5% {
+        clip: rect(17px, 9999px, 68px, 0);
+    }
+    10% {
+        clip: rect(89px, 9999px, 75px, 0);
+    }
+    /* ... more keyframes ... */
+    100% {
+        clip: rect(10px, 9999px, 66px, 0);
+    }
+}
+
+/* Ensure proper font loading */
+body {
+    font-family: 'Share Tech', sans-serif;
+}
+
+.monospace-text {
+    font-family: 'Share Tech Mono', monospace;
+} 

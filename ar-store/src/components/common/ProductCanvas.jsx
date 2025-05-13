@@ -4,7 +4,7 @@ import { OrbitControls } from '@react-three/drei'
 export default function ProductCanvas({ children, cameraPosition = [2, 2, 2] }) {
     return (
         <Canvas
-            frameloop="demand"
+            frameloop="demand"g
             camera={{ position: cameraPosition, fov: 50 }}
         >
             <ambientLight intensity={0.5} />
