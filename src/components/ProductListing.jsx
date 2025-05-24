@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, useGLTF } from '@react-three/drei';
+import { Link } from 'react-router-dom';
 
 const products = [
     {
@@ -9,25 +10,27 @@ const products = [
         name: 'Premium Chair',
         price: '$299',
         category: 'Furniture',
-        modelPath: '/models/chair.glb'
+        modelPath: '/models/1.glb'
     },
     {
         id: 2,
         name: 'Modern Table',
         price: '$499',
         category: 'Furniture',
-        modelPath: '/models/table.glb'
+        modelPath: '/models/scene.glb'
     },
     {
         id: 3,
         name: 'Designer Lamp',
         price: '$199',
         category: 'Lighting',
-        modelPath: '/models/lamp.glb'
+        modelPath: '/models/3.glb'
     }
 ];
 
 function ProductCard({ product }) {
+    const model = useGLTF(product.modelPath);
+
     return (
         <motion.div
             whileHover={{ scale: 1.05 }}
@@ -43,13 +46,15 @@ function ProductCard({ product }) {
             <div style={{ height: '300px', position: 'relative' }}>
                 <Canvas camera={{ position: [0, 0, 5], fov: 75 }}>
                     <ambientLight intensity={0.5} />
-                    <pointLight position={[10, 10, 10]} />
+                    <directionalLight position={[10, 10, 5]} intensity={1} />
                     <OrbitControls enableZoom={false} />
-                    {/* Add your 3D model here */}
+                    <Suspense fallback={null}>
+                        <primitive object={model.scene} scale={1} position={[0, -1, 0]} />
+                    </Suspense>
                 </Canvas>
             </div>
             <div style={{ padding: '1.5rem' }}>
-                <h3 style={{ 
+                <h3 style={{
                     color: 'white',
                     marginBottom: '0.5rem',
                     fontSize: '1.25rem'
@@ -68,6 +73,28 @@ function ProductCard({ product }) {
                     fontSize: '0.875rem',
                     marginTop: '0.5rem'
                 }}>{product.category}</span>
+                <Link to={`/ar/${product.id}`} style={{ textDecoration: 'none' }}>
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '0.75rem',
+                            marginTop: '1rem',
+                            background: 'linear-gradient(135deg, #86198f 0%, #9333ea 100%)', // Darker purple gradient
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.5rem',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            textAlign: 'center'
+                        }}
+                    >
+                        View in AR
+                    </motion.button>
+                </Link>
             </div>
         </motion.div>
     );
